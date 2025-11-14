@@ -1,0 +1,121 @@
+# =============================
+# CARGA Y PREPROCESADO DE AUDIO
+# =============================
+fs_guitar, guitar_signal = wavfile.read('Audio01.wav')  # Cargar guitarra
+fs_piano, piano_signal   = wavfile.read('Audio02.wav')  # Cargar piano
+
+# Convertir a mono si son estéreo
+if len(guitar_signal.shape) > 1:
+    guitar_signal = guitar_signal.mean(axis=1)
+
+if len(piano_signal.shape) > 1:
+    piano_signal = piano_signal.mean(axis=1)
+
+# Calcular duraciones
+duracion1 = len(guitar_signal) / fs_guitar
+duracion2 = len(piano_signal) / fs_piano
+
+# Frecuencias de muestreo
+fs1 = 44100   # Adecuada
+fs2 = 22050   # Inadecuada (para el ejemplo)
+
+# ==============================
+# Guitarra: muestreo adecuado / inadecuado
+# ==============================
+t_fs1_guitar = np.linspace(0, duracion1, len(guitar_signal))
+t_fs2_guitar = np.linspace(0, duracion1, int(duracion1 * fs2))
+
+# Señales muestreadas
+guitar_fs1 = guitar_signal[:len(t_fs1_guitar)]
+guitar_fs2 = np.interp(t_fs2_guitar,
+                       np.linspace(0, duracion1, len(guitar_signal)),
+                       guitar_signal)
+
+# ===============
+# FIGURA 1: GUITARRA
+# ===============
+plt.figure(figsize=(12, 10))
+
+plt.subplot(3, 1, 1)
+plt.plot(t_fs1_guitar, guitar_signal, label='Guitarra Original (sin aliasing)')
+plt.title("Guitarra Original")
+plt.xlabel("Tiempo [s]")
+plt.ylabel("Amplitud")
+plt.legend()
+
+plt.subplot(3, 1, 2)
+plt.stem(t_fs1_guitar, guitar_fs1, 'r', markerfmt='ro', basefmt=" ")
+plt.title("Guitarra Muestreada Adecuadamente (fs1 = 44100 Hz)")
+plt.xlabel("Tiempo [s]")
+plt.ylabel("Amplitud")
+plt.legend(["Muestras"])
+
+plt.subplot(3, 1, 3)
+plt.stem(t_fs2_guitar, guitar_fs2, 'g', markerfmt='go', basefmt=" ")
+plt.title("Guitarra Muestreada Inadecuadamente (fs2 = 22050 Hz, Aliasing)")
+plt.xlabel("Tiempo [s]")
+plt.ylabel("Amplitud")
+plt.legend(["Muestras"])
+
+plt.tight_layout()
+plt.show()
+
+# ==============================
+# Piano: muestreo adecuado / inadecuado
+# ==============================
+t_fs1_piano = np.linspace(0, duracion2, len(piano_signal))
+t_fs2_piano = np.linspace(0, duracion2, int(duracion2 * fs2))
+
+piano_fs1 = piano_signal[:len(t_fs1_piano)]
+piano_fs2 = np.interp(t_fs2_piano,
+                      np.linspace(0, duracion2, len(piano_signal)),
+                      piano_signal)
+
+# ===============
+# FIGURA 2: PIANO
+# ===============
+plt.figure(figsize=(12, 10))
+
+plt.subplot(3, 1, 1)
+plt.plot(t_fs1_piano, piano_signal, label='Piano Original (sin aliasing)')
+plt.title("Piano Original")
+plt.xlabel("Tiempo [s]")
+plt.ylabel("Amplitud")
+plt.legend()
+
+plt.subplot(3, 1, 2)
+plt.stem(t_fs1_piano, piano_fs1, 'r', markerfmt='ro', basefmt=" ")
+plt.title("Piano Muestreado Adecuadamente (fs1 = 44100 Hz)")
+plt.xlabel("Tiempo [s]")
+plt.ylabel("Amplitud")
+plt.legend(["Muestras"])
+
+plt.subplot(3, 1, 3)
+plt.stem(t_fs2_piano, piano_fs2, 'g', markerfmt='go', basefmt=" ")
+plt.title("Piano Muestreado Inadecuadamente (fs2 = 22050 Hz, Aliasing)")
+plt.xlabel("Tiempo [s]")
+plt.ylabel("Amplitud")
+plt.legend(["Muestras"])
+
+plt.tight_layout()
+plt.show()
+
+# =====================
+# GUARDAR LOS AUDIOS
+# =====================
+output_dir = "Generados"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+# Guardar versiones normalizadas
+wavfile.write(os.path.join(output_dir, 'guitar_muestreada_fs1.wav'),
+              fs1, np.int16(guitar_fs1 / np.max(np.abs(guitar_fs1)) * 32767))
+
+wavfile.write(os.path.join(output_dir, 'guitar_muestreada_fs2.wav'),
+              fs2, np.int16(guitar_fs2 / np.max(np.abs(guitar_fs2)) * 32767))
+
+wavfile.write(os.path.join(output_dir, 'piano_muestreada_fs1.wav'),
+              fs1, np.int16(piano_fs1 / np.max(np.abs(piano_fs1)) * 32767))
+
+wavfile.write(os.path.join(output_dir, 'piano_muestreada_fs2.wav'),
+              fs2, np.int16(piano_fs2 / np.max(np.abs(piano_fs2)) * 32767))
