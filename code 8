@@ -1,0 +1,93 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.io import wavfile
+import os
+
+# =============================
+# CARGA Y PREPROCESADO DE AUDIO
+# =============================
+fs_guitar, guitar_signal = wavfile.read('Audio01.wav')
+
+# Convertir a mono si es estéreo
+if guitar_signal.ndim > 1:
+    guitar_signal = guitar_signal.mean(axis=1)
+
+# Frecuencias de muestreo
+fs1 = fs_guitar          # adecuado (el original)
+fs2 = fs1 // 2           # "inadecuado" (22050 Hz si fs1=44100)
+
+# Tiempo original
+t_guitar = np.arange(len(guitar_signal)) / fs1
+duracion1 = t_guitar[-1]
+
+# Downsampling para fs2 (cogemos 1 de cada 2 muestras)
+factor = fs1 // fs2
+guitar_fs1 = guitar_signal              # tal cual
+guitar_fs2 = guitar_signal[::factor]    # señal muestreada a fs2
+t_fs2_guitar = t_guitar[::factor]
+
+# --------- Recorte para ver bien el muestreo ----------
+recorte_t = 0.02  # 20 ms
+mask_full   = t_guitar <= duracion1    # para la gráfica larga (opcional)
+mask_vent   = t_guitar <= recorte_t
+mask_vent_2 = t_fs2_guitar <= recorte_t
+
+# ===============
+# FIGURA: GUITARRA
+# ===============
+plt.figure(figsize=(12, 8))
+
+# 1) Vista global de la señal original
+plt.subplot(3, 1, 1)
+plt.plot(t_guitar[mask_full], guitar_signal[mask_full],
+         label='Guitarra original (fs = 44100 Hz)')
+plt.title("Guitarra Original")
+plt.xlabel("Tiempo [s]")
+plt.ylabel("Amplitud")
+plt.legend()
+plt.grid(alpha=0.3)
+
+# 2) Zoom primeros 20 ms con muestreo adecuado
+plt.subplot(3, 1, 2)
+plt.plot(t_guitar[mask_vent], guitar_signal[mask_vent], alpha=0.7,
+         label='Señal continua (referencia)')
+markerline1, stemlines1, baseline1 = plt.stem(
+    t_guitar[mask_vent], guitar_fs1[mask_vent], basefmt=" ")
+plt.setp(markerline1, marker='o')
+plt.title(f"Guitarra muestreada adecuadamente (fs1 = {fs1} Hz)")
+plt.xlabel("Tiempo [s]")
+plt.ylabel("Amplitud")
+plt.legend()
+plt.grid(alpha=0.3)
+
+# 3) Zoom mismos 20 ms con muestreo inadecuado
+plt.subplot(3, 1, 3)
+plt.plot(t_guitar[mask_vent], guitar_signal[mask_vent], alpha=0.7,
+         label='Señal continua (referencia)')
+markerline2, stemlines2, baseline2 = plt.stem(
+    t_fs2_guitar[mask_vent_2], guitar_fs2[mask_vent_2], basefmt=" ")
+plt.setp(markerline2, marker='o')
+plt.title(f"Guitarra muestreada inadecuadamente (fs2 = {fs2} Hz, posible aliasing)")
+plt.xlabel("Tiempo [s]")
+plt.ylabel("Amplitud")
+plt.legend()
+plt.grid(alpha=0.3)
+
+plt.tight_layout()
+plt.show()
+
+# =====================
+# GUARDAR LOS AUDIOS
+# =====================
+output_dir = "Generados"
+os.makedirs(output_dir, exist_ok=True)
+
+# Normalizar y guardar
+def normaliza_int16(x):
+    return np.int16(x / np.max(np.abs(x)) * 32767)
+
+wavfile.write(os.path.join(output_dir, 'guitarra_fs1_44100.wav'),
+              fs1, normaliza_int16(guitar_fs1))
+
+wavfile.write(os.path.join(output_dir, 'guitarra_fs2_22050.wav'),
+              fs2, normaliza_int16(guitar_fs2))
